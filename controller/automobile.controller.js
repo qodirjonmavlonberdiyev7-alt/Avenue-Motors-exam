@@ -1,16 +1,17 @@
 const AutomobileSchema = require("../schema/cars.schema")
+const CustomErrorHandler = require("../utils/custom-error-handler")
 
 
-const getAllCars = async (req, res) => {
+const getAllCars = async (req, res, next) => {
     try {
         const automobiles = await AutomobileSchema.find()
         res.status(200).json(automobiles)
     }catch(error){
-        console.log(error.message);
+        next(error)
     }
 }
 
-const addCar = async (req, res) => {
+const addCar = async (req, res, next) => {
     try {
        const {automobile_name,brend_name,horse_power,year,transmission,seats,price,country,color,fuel_type} = req.body
        await AutomobileSchema.create({automobile_name,brend_name,horse_power,year,transmission,seats,price,country,color,fuel_type})
@@ -19,57 +20,67 @@ const addCar = async (req, res) => {
         message: "Added new automobile"
        })
     }catch(error){
-        console.log(error.message);
+        next(error)
     }
 }
 
-const getOneCar = async (req, res) => {
+const getCarsByBrand = async (req, res, next) => {
+    try {
+        const { brandId } = req.params
+        const cars = await AutomobileSchema.find({ brand: brandId }).populate("brand")
+        res.status(200).json(cars)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const getOneCar = async (req, res, next) => {
     try{
         const {id} = req.params
 
-    const automobile = await AutomobileSchema.findById(id)
+    const automobile = await AutomobileSchema.findById(id).populate("brand")
     if(!automobile){
-        throw new Error("Automobile not found")
+        throw CustomErrorHandler.NotFound("Automobile not found")
     }
 
     res.status(200).json(automobile)
     }catch(error){
-        console.log(error.message);
+        next(error)
     }
 }
 
 
-const updateCar = async (req, res) => {
+const updateCar = async (req, res, next) => {
    try{
      const {id} = req.params
     
-    const {price} = req.body
+    const {price, distance, tonirovka} = req.body
     const foundedCar = await AutomobileSchema.findById(id)
 
     if(!foundedCar){
-        throw new Error("Automobile not found")
+        throw CustomErrorHandler.NotFound("Automobile not found")
     }
     await AutomobileSchema.findByIdAndUpdate(id, 
-       {price} 
+       {price, distance}, { new: true }
     )
 
     res.status(200).json({
         message: "Automobile updated"
     })
    }catch(error){
-    console.log(error.message);
+    next(error)
    }
 }
 
 
-const deleteCar = async (req, res) => {
+const deleteCar = async (req, res, next) => {
     try{
         const {id} = req.params
 
     const automobile = await AutomobileSchema.findById(id)
 
     if(!automobile){
-        throw new Error("Automobile not founded")
+        throw CustomErrorHandler.NotFound("Automobile not found")
     }
 
     await AutomobileSchema.findByIdAndDelete(id)
@@ -78,7 +89,7 @@ const deleteCar = async (req, res) => {
         message: "Automobile deleted"
     })
     }catch(error){
-        console.log(error.message);
+        next(error)
     }
 }
 
@@ -88,5 +99,6 @@ module.exports = {
     getOneCar,
     addCar,
     updateCar,
-    deleteCar
+    deleteCar,
+    getCarsByBrand
 }
